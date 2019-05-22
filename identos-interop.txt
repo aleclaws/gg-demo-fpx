@@ -1,0 +1,74 @@
+
+# Purpose
+
+Use the demo client in the gg-gateway project to evaluate interoperability and differences between an UMA client connecting to a Gluu vs Identos system. 
+
+One assumption is that the client implementation works with current Gluu AS (I didn't run any Gluu products)
+
+
+# Results
+
+Overall very minor client differences required between the GLUU and IDENTOS implementations.
+
+Client->RS: no differences
+Client->AS: few differences (client authentication, rpt request and needs_info,redirect_user response)
+
+
+
+## UMA Implementation Differences
+
+### Client authentication to AS
+
+GLUU: Client must get access token (called PAT?) before using the rpt endpoint
+IDENTOS: Client uses client credentials directly with rpt endpoint
+
+
+### RPT request
+
+(UMA Grant 3.3.1 Client Request to Authorization Server for RPT)
+
+GLUU: body includes ticket & "oxd_id"
+IDENTOS: body includes ticket & "grant_type"
+
+
+### RPT response: needs_info, redirect_user
+
+(UMA Grant 3.3.6 Authorization Server Response to Client on Authorization Failure)
+
+GLUU: client can use the redirect_user uri directly without other processing (guessing this is just for demo?)
+IDENTOS: returns the base url (same as the value in the well-known right now) without any params
+
+
+*** Q: should this be a complete uri (eg ticket as query param) or just the endpoint and require the client to build the url?
+	- the client must append additional data
+		- state
+		- redirect_uri (if only 1 registered, the AS *could*  append/assume)
+
+
+### Client->RS resource request
+
+GLUU: client requests against the gluu-gateway and must include downstream Host param (I think?)
+IDENTOS: no Host required, no knowledge of RS internals
+
+
+
+
+## Other 'code' changes
+- moved hardcoded AS endpoints (eg rpt endpoint) into the config.py (from helper.py)
+
+- index.py, use as_uri from RPT-less resource request
+	- even if the as_uri is used, on the callback the server hardcodes the AS location (no state atm)
+
+- index.py, move redirect link creating & presentation into helper.py 
+	- consistency with other methods
+
+- helper.py display_response, handle exception when response json is not set
+
+- helper.py get_ticket 
+	- renamed to get_as_and_ticket
+	- parse and return as_uri and ticket
+	- improve www-authenticate header parsing
+
+- helper.py add display_redirect_link function
+
+
